@@ -36,8 +36,9 @@ var fill_color = colors_old;
 var S = 5;
 var B = 2*S + 1;
 var c_r = S, c_c = S;
-var board_mask;
-var board_hex;
+var board_mask; // which hexes exist on the board
+var board_core; // in underlying game, the owner of each hex
+var board_hex; // jquery objects for the hex elements
 
 function init_board()
 {
@@ -47,9 +48,11 @@ function init_board()
 
     // board
     board_mask = [];
+    board_core = [];
     board_hex = [];
     for (var r = 0; r < B; ++r) {
         board_mask[r] = [];
+        board_core[r] = [];
         board_hex[r] = [];
         for (var c = 0; c < B; ++c) {
             board_mask[r][c] = (
@@ -60,7 +63,10 @@ function init_board()
                 (c_r - r) + (c_c - c) < S &&
                 (r - c_r) + (c - c_c) < S);
 
+
             if (board_mask[r][c]) {
+                board_core[r][c] = EMPTY;
+
                 // http://stackoverflow.com/a/3642265
                 var hex = $( document.createElementNS('http://www.w3.org/2000/svg', 'polygon') );
 
@@ -111,6 +117,68 @@ function display_score(score)
     }
 }
 
+var D = 6;
+var dr = [ -1,  1,  0,  0, -1,  1 ];
+var dc = [  0,  0, -1,  1,  1, -1 ];
+
+function calculate_score()
+{
+    var mark = [];
+    for (var r = 0; r < B; ++r) {
+        mark[r] = [];
+    }
+
+    var ret = [ [], [] ];
+
+    for (var r = 0; r < B; ++r) {
+        for (var c = 0; c < B; ++c) {
+            if (!board_mask[r][c]) continue;
+            var player = board_core[r][c];
+            if (player == EMPTY) continue;
+            console.log('found stone at ' + r + ' ' + c);
+            if (mark[r][c]) continue;
+            mark[r][c] = true;
+
+            var q = [ [r, c] ];
+            var qf = 0;
+
+            while (qf < q.length) {
+                var r1 = q[qf][0];
+                var c1 = q[qf][1];
+                ++qf;
+
+                for (var d = 0; d < D; ++d) {
+                    var r2 = r1 + dr[d];
+                    var c2 = c1 + dc[d];
+
+                    if (!board_mask[r2][c2]) continue;
+                    if (board_core[r2][c2] != player) continue;
+                    if (mark[r2][c2]) continue;
+                    mark[r2][c2] = true;
+
+                    q.push( [r2, c2] );
+                }
+            }
+
+            ret[player].push(qf);
+        }
+    }
+
+    for (var player = 0; player <= 1; ++player) {
+        // Javascript does string sort (not numeric sort) by default.
+        // Also we sort in reverse order.
+        ret[player].sort( function(x, y) { return y - x; } );
+    }
+
+    return ret;
+}
+
+function refresh_score()
+{
+    var score = calculate_score();
+    display_score(score);
+}
+
 function display_moves(moves)
 {
     $('#moves').text(moves);
@@ -143,6 +211,9 @@ function on_click_hex(e)
 {
     var hex = $(this);
     var r = hex.data('r'), c = hex.data('c');
+
+    board_core[r][c] = active_player;
+    refresh_score();
 
     var hex = board_hex[r][c];
     hex.attr('fill', current_fill());
@@ -179,9 +250,7 @@ function on_settings_change()
 
 init_board();
 
-// TODO: Calculate score.
-//display_score([ [8, 6, 1, 1, 1, 1, 1, 1, 1], [9, 5, 2, 1, 1, 1, 1] ]);
-display_score([ [], [] ]);
+refresh_score();
 
 // TODO: Show appropriate move count.
 //display_moves(2);
