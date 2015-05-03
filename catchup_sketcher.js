@@ -1,9 +1,9 @@
 "use strict";
 
-var hex_radius = 16.5;
+var hex_radius = 22.0;
 var hex_y_offset = 90.0; // of hexes E1, F1, G1, H1, I1
-var hex_x_offset = 30.0; // of hex A5
-var hex_x_incr = 30.0;
+var hex_x_offset = 50.0; // of hex A5
+var hex_x_incr = 40.0;
 var hex_y_incr = Math.sqrt(3.0) / 2.0 * hex_x_incr;
 
 // littlegolem colors
