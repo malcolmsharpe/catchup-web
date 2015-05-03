@@ -7,11 +7,31 @@ var hex_x_incr = 40.0;
 var hex_y_incr = Math.sqrt(3.0) / 2.0 * hex_x_incr;
 
 // littlegolem colors
-var fill_empty = "#E5E5E5";
-var fill_black = "#3685AA";
-var fill_white = "#FFBE5C";
-var fill_black_highlight = "#0055AA";
-var fill_white_highlight = "#FF9900";
+var colors_old = {
+    background: "#FFF0F0",
+    header: "#F0FFF0",
+    empty: "#E5E5E5",
+    black: "#3685AA",
+    white: "#FFBE5C",
+    black_highlight: "#0055AA",
+    white_highlight: "#FF9900",
+};
+var colors_new = $.extend({}, colors_old, {
+    background: "#F0FFF0",
+    header: "#F0F0FF",
+});
+var colors_ios = {
+    background: "#1796F6",
+    header: "#98D4D0",
+    empty: "#98D4D0",
+    black: "#0000F9",
+    white: "#D8DDC0",
+    // TODO: The iOS-style highlights should be done with arrows.
+    black_highlight: "#0000F9",
+    white_highlight: "#D8DDC0",
+};
+
+var fill_color = colors_old;
 
 var S = 5;
 var B = 2*S + 1;
@@ -21,6 +41,10 @@ var board_hex;
 
 function init_board()
 {
+    // backdrop
+    $('#background').attr('style', 'fill:' + fill_color.background);
+    $('#header').attr('style', 'fill:' + fill_color.header);
+
     // board
     board_mask = [];
     board_hex = [];
@@ -51,7 +75,7 @@ function init_board()
                     points += x.toFixed(2) + ',' + y.toFixed(2) + ' ';
                 }
                 hex.attr('points', points);
-                hex.attr('fill', fill_empty);
+                hex.attr('fill', fill_color.empty);
 
                 $('#board').append(hex);
                 board_hex[r][c] = hex;
@@ -68,6 +92,9 @@ function init_board()
     // settings
     $('#settings').on('change', on_settings_change);
     on_settings_change();
+
+    // make board visible now that it has been colored
+    $('#board').attr('style', '');
 }
 
 function display_score(score)
@@ -93,12 +120,12 @@ function current_fill()
 {
     var ret;
     if (active_player == BLACK) {
-        ret = highlight ? fill_black_highlight : fill_black;
+        ret = highlight ? fill_color.black_highlight : fill_color.black;
     } else if (active_player == WHITE) {
-        ret = highlight ? fill_white_highlight : fill_white;
+        ret = highlight ? fill_color.white_highlight : fill_color.white;
     } else {
         console.assert(active_player == EMPTY);
-        ret = fill_empty;
+        ret = fill_color.empty;
     }
     return ret;
 }
