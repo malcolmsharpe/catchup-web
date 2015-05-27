@@ -101,6 +101,12 @@ function init_board()
 
     // make board visible now that it has been colored
     $('#board').attr('style', '');
+
+    // clear button
+    $('#clear').on('click', on_clear);
+
+    // SGF import
+    $('#import').find('[type="button"]').on('click', on_import);
 }
 
 function display_score(score)
@@ -135,7 +141,6 @@ function calculate_score()
             if (!board_mask[r][c]) continue;
             var player = board_core[r][c];
             if (player == EMPTY) continue;
-            console.log('found stone at ' + r + ' ' + c);
             if (mark[r][c]) continue;
             mark[r][c] = true;
 
@@ -184,18 +189,26 @@ function display_moves(moves)
     $('#moves').text(moves);
 }
 
-function current_fill()
-{
+function compute_fill(player, highlight) {
+    if (typeof highlight === "undefined") {
+        highlight = false;
+    }
+
     var ret;
-    if (active_player == BLACK) {
+    if (player == BLACK) {
         ret = highlight ? fill_color.black_highlight : fill_color.black;
-    } else if (active_player == WHITE) {
+    } else if (player == WHITE) {
         ret = highlight ? fill_color.white_highlight : fill_color.white;
     } else {
-        console.assert(active_player == EMPTY);
+        console.assert(player == EMPTY);
         ret = fill_color.empty;
     }
     return ret;
+}
+
+function current_fill()
+{
+    return compute_fill(active_player, active_highlight);
 }
 
 function refresh_hex(hex)
@@ -207,17 +220,38 @@ function refresh_hex(hex)
     }
 }
 
+function set_hex(player, r, c, fill)
+{
+    if (typeof fill === "undefined") {
+        fill = compute_fill(player);
+    }
+
+    board_core[r][c] = player;
+
+    var hex = board_hex[r][c];
+    hex.attr('fill', fill);
+    refresh_hex(hex);
+}
+
 function on_click_hex(e)
 {
     var hex = $(this);
     var r = hex.data('r'), c = hex.data('c');
 
-    board_core[r][c] = active_player;
+    set_hex(active_player, r, c, current_fill());
     refresh_score();
+}
 
-    var hex = board_hex[r][c];
-    hex.attr('fill', current_fill());
-    refresh_hex(hex);
+function clear_board()
+{
+    for (var r = 0; r < B; ++r) {
+        for (var c = 0; c < B; ++c) {
+            if (!board_mask[r][c]) continue;
+
+            set_hex(EMPTY, r, c);
+        }
+    }
+    refresh_score();
 }
 
 var BLACK = 0, WHITE = 1, EMPTY = 2;
@@ -227,11 +261,11 @@ var parse_player = {
     'white': WHITE,
     'empty': EMPTY,
 };
-var highlight = false;
+var active_highlight = false;
 function on_settings_change()
 {
     active_player = parse_player[ $('#settings').find('[name="player"]:checked').val() ];
-    highlight = $('#settings').find('[name="highlight"]:checked').length == 1;
+    active_highlight = $('#settings').find('[name="highlight"]:checked').length == 1;
 
     var ckbox = $('#settings').find('[name="highlight"]');
     var disable_ckbox = active_player == EMPTY;
@@ -246,6 +280,51 @@ function on_settings_change()
             }
         }
     }
+}
+
+function on_clear()
+{
+    clear_board();
+}
+
+function on_import()
+{
+    var sgf_box = $('#import').find('[name="sgf"]');
+    var sgf = sgf_box.val();
+
+    clear_board();
+    var moves = parse_sgf(sgf);
+
+    $.each(moves, function(i, m) {
+        var p = m[0];
+        var r = m[1];
+        var c = m[2];
+
+        set_hex(p, r, c);
+    });
+
+    refresh_score();
+}
+
+// Return [(player, row, col)] in order.
+// TODO: Make a more robust parser.
+function parse_sgf(sgf)
+{
+    var ret = [];
+
+    var matches = sgf.match(/;[BW]\[[a-z]*\]/g);
+    $.each(matches, function(index, s) {
+        var p = {'B': BLACK, 'W': WHITE}[s[1]];
+
+        for (var i = 3; i < s.length - 1; i += 2) {
+            var c = s.charCodeAt(i) - 'a'.charCodeAt() + 1;
+            var r = s.charCodeAt(i+1) - 'a'.charCodeAt() + 1;
+
+            ret.push( [p, r, c] );
+        }
+    });
+
+    return ret;
 }
 
 init_board();
